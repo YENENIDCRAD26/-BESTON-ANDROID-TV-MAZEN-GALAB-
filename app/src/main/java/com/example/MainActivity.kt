@@ -19,6 +19,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
@@ -46,19 +47,24 @@ class MainActivity : ComponentActivity() {
                 val t = if (isRtl) Translations.ar else Translations.en
 
                 CompositionLocalProvider(LocalLayoutDirection provides layoutDirection) {
-                    Scaffold(
-                        modifier = Modifier.fillMaxSize().background(BgDark),
-                        containerColor = BgDark,
-                        topBar = { TopHeader(t, language, viewModel) }
-                    ) { innerPadding ->
-                        Column(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .padding(innerPadding)
-                        ) {
-                            TabsRow(t, viewModel)
-                            Divider(color = BorderColor)
-                            MainContent(t, viewModel)
+                    val powerState by viewModel.powerState.collectAsState()
+                    if (powerState == "shutting_down") {
+                        ShutdownScreen(t, viewModel)
+                    } else {
+                        Scaffold(
+                            modifier = Modifier.fillMaxSize().background(BgDark),
+                            containerColor = BgDark,
+                            topBar = { TopHeader(t, language, viewModel) }
+                        ) { innerPadding ->
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(innerPadding)
+                            ) {
+                                TabsRow(t, viewModel)
+                                Divider(color = BorderColor)
+                                MainContent(t, viewModel)
+                            }
                         }
                     }
                 }
@@ -110,7 +116,8 @@ fun TabsRow(t: Translations.Translation, viewModel: AppViewModel) {
         "device" to t.strings["tab_device"],
         "packages" to t.strings["tab_packages"],
         "desktop" to t.strings["tab_desktop"],
-        "settings" to t.strings["tab_settings"]
+        "settings" to t.strings["tab_settings"],
+        "performance" to t.strings["tab_performance"]
     )
 
     Row(
@@ -162,6 +169,7 @@ fun MainContent(t: Translations.Translation, viewModel: AppViewModel) {
             "packages" -> PackagesContent(t, viewModel)
             "desktop" -> DesktopContent(t, viewModel)
             "settings" -> SettingsContent(t, viewModel)
+            "performance" -> PerformanceContent(t, viewModel)
             else -> DashboardContent(t, viewModel)
         }
         Spacer(modifier = Modifier.height(24.dp))
@@ -231,19 +239,60 @@ fun DashboardContent(t: Translations.Translation, viewModel: AppViewModel) {
 
 @Composable
 fun UpdateCheckContent(t: Translations.Translation, viewModel: AppViewModel) {
+    val updateState by viewModel.updateState.collectAsState()
+    val checkLogs by viewModel.checkLogs.collectAsState()
+
     SectionTitle(t.check.eyebrow, t.check.title, t.check.subtitle)
-    Card {
-        Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
-            Badge(t.strings["update_available"] ?: "", "warning")
+    
+    if (updateState == "idle") {
+        Card {
+            Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
+                Badge(t.strings["ready_to_check"] ?: "", "neutral")
+                Spacer(modifier = Modifier.height(14.dp))
+                Text(t.strings["checking_for_updates"] ?: "Checking for updates...", color = TextPrimary, fontSize = 22.sp, fontWeight = FontWeight.Black, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                Spacer(modifier = Modifier.height(14.dp))
+                Text(t.strings["compat_msg"] ?: "", color = NeutralText, fontSize = 14.sp, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+            }
             Spacer(modifier = Modifier.height(14.dp))
-            Text("${AppData.updatePackage.version} ${t.strings["update_msg"]}", color = TextPrimary, fontSize = 22.sp, fontWeight = FontWeight.Black, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
-            Spacer(modifier = Modifier.height(14.dp))
-            Text(t.strings["compat_msg"] ?: "", color = NeutralText, fontSize = 14.sp, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                ActionButton(t.strings["run_check"] ?: "", onClick = { viewModel.runUpdateCheck(t) })
+            }
         }
-        Spacer(modifier = Modifier.height(14.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            ActionButton(t.strings["run_check"] ?: "", onClick = { })
-            ActionButton(t.strings["proceed_to_download"] ?: "", onClick = { viewModel.setActiveTab("install") }, tone = "secondary")
+    } else if (updateState == "checking") {
+        Card {
+            Column(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
+                Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Text(t.strings["checking_for_updates"] ?: "Checking for updates...", color = TextPrimary, fontSize = 17.sp, fontWeight = FontWeight.Black)
+                    androidx.compose.material3.CircularProgressIndicator(color = Color(0xFF1D4ED8), modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
+                }
+                Spacer(modifier = Modifier.height(14.dp))
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(Color(0xFF0B1B2E), RoundedCornerShape(12.dp))
+                        .padding(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    checkLogs.forEach { log ->
+                        Text(log, color = Color(0xFF60A5FA), fontSize = 13.sp, fontFamily = FontFamily.Monospace)
+                    }
+                }
+            }
+        }
+    } else if (updateState == "available" || updateState == "downloading") {
+        Card {
+            Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
+                Badge(t.strings["update_available"] ?: "", "warning")
+                Spacer(modifier = Modifier.height(14.dp))
+                Text("${AppData.updatePackage.version} ${t.strings["update_msg"]}", color = TextPrimary, fontSize = 22.sp, fontWeight = FontWeight.Black, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                Spacer(modifier = Modifier.height(14.dp))
+                Text(t.strings["compat_msg"] ?: "", color = NeutralText, fontSize = 14.sp, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+            }
+            Spacer(modifier = Modifier.height(14.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                ActionButton(t.strings["run_check"] ?: "", onClick = { viewModel.runUpdateCheck(t) }, tone = "secondary")
+                ActionButton(t.strings["proceed_to_download"] ?: "", onClick = { viewModel.setActiveTab("install") })
+            }
         }
     }
     
@@ -398,6 +447,40 @@ fun PackagesContent(t: Translations.Translation, viewModel: AppViewModel) {
             }
         }
     }
+    
+    val usbState by viewModel.usbInstallState.collectAsState()
+    Card {
+        Column(modifier = Modifier.fillMaxWidth()) {
+            Text(t.strings["install_from_usb"] ?: "Install from USB", color = TextPrimary, fontSize = 17.sp, fontWeight = FontWeight.Black)
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(t.strings["usb_install_desc"] ?: "Open, update, and install system packages from an external USB storage drive.", color = NeutralText, fontSize = 14.sp)
+            Spacer(modifier = Modifier.height(14.dp))
+            
+            if (usbState == "idle") {
+                ActionButton(
+                    label = t.strings["install_from_usb"] ?: "Install from USB",
+                    onClick = { viewModel.installFromUsb(t) },
+                    tone = "primary"
+                )
+            } else if (usbState == "checking") {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    androidx.compose.material3.CircularProgressIndicator(color = Color(0xFF1D4ED8), modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text(t.strings["usb_not_found"] ?: "Checking for USB...", color = NeutralText, fontSize = 14.sp)
+                }
+            } else if (usbState == "installing") {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    androidx.compose.material3.CircularProgressIndicator(color = Color(0xFF1D4ED8), modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text(t.strings["installing_usb"] ?: "Installing from USB...", color = NeutralText, fontSize = 14.sp)
+                }
+            } else if (usbState == "success") {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Badge(t.strings["usb_pkg_found"] ?: "Success", "success")
+                }
+            }
+        }
+    }
 }
 
 @Composable
@@ -445,7 +528,7 @@ fun SettingsContent(t: Translations.Translation, viewModel: AppViewModel) {
         Spacer(modifier = Modifier.height(14.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             ActionButton(t.strings["restart"] ?: "", onClick = { }, tone = "warning")
-            ActionButton(t.strings["shutdown"] ?: "", onClick = { }, tone = "danger")
+            ActionButton(t.strings["shutdown"] ?: "", onClick = { viewModel.setPowerState("shutting_down") }, tone = "danger")
         }
         Spacer(modifier = Modifier.height(14.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -502,5 +585,111 @@ fun SettingsContent(t: Translations.Translation, viewModel: AppViewModel) {
             Switch(checked = true, onCheckedChange = {})
         }
     }
+
+    val revertState by viewModel.revertState.collectAsState()
+    Card {
+        Column(modifier = Modifier.fillMaxWidth()) {
+            Text(t.strings["revert_os"] ?: "Revert to Previous OS", color = TextPrimary, fontSize = 17.sp, fontWeight = FontWeight.Black)
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(t.strings["revert_os_desc"] ?: "Restore the system to the previous working OS version if the current update is unstable.", color = NeutralText, fontSize = 14.sp)
+            Spacer(modifier = Modifier.height(14.dp))
+            if (revertState == "reverting") {
+                Row(horizontalArrangement = Arrangement.Center, modifier = Modifier.fillMaxWidth()) {
+                    androidx.compose.material3.CircularProgressIndicator(color = Color(0xFF1D4ED8), modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
+                }
+            } else {
+                ActionButton(
+                    label = t.strings["revert_os"] ?: "Revert to Previous OS",
+                    onClick = { viewModel.revertOS(t) },
+                    tone = if (revertState == "success") "success" else "danger"
+                )
+            }
+        }
+    }
 }
 
+@Composable
+fun PerformanceContent(t: Translations.Translation, viewModel: AppViewModel) {
+    val cpu by viewModel.cpuUsage.collectAsState()
+    val ram by viewModel.ramUsage.collectAsState()
+    val storage by viewModel.storageHealth.collectAsState()
+
+    SectionTitle(t.strings["perf_dashboard"] ?: "Performance Dashboard", t.strings["perf_desc"] ?: "Real-time system resource monitoring.", null)
+
+    Card {
+        Text(t.strings["cpu_usage"] ?: "CPU Usage", color = TextPrimary, fontSize = 17.sp, fontWeight = FontWeight.Black)
+        Spacer(modifier = Modifier.height(14.dp))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text("${cpu.toInt()}%", color = Color(0xFF38BDF8), fontSize = 24.sp, fontWeight = FontWeight.Black, modifier = Modifier.width(60.dp))
+            Spacer(modifier = Modifier.width(16.dp))
+            ProgressBar(cpu.toInt())
+        }
+    }
+    Spacer(modifier = Modifier.height(16.dp))
+    Card {
+        Text(t.strings["ram_allocation"] ?: "RAM Allocation", color = TextPrimary, fontSize = 17.sp, fontWeight = FontWeight.Black)
+        Spacer(modifier = Modifier.height(14.dp))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text("${ram.toInt()}%", color = Color(0xFF34D399), fontSize = 24.sp, fontWeight = FontWeight.Black, modifier = Modifier.width(60.dp))
+            Spacer(modifier = Modifier.width(16.dp))
+            ProgressBar(ram.toInt())
+        }
+    }
+    Spacer(modifier = Modifier.height(16.dp))
+    Card {
+        Text(t.strings["storage_health"] ?: "Storage Health", color = TextPrimary, fontSize = 17.sp, fontWeight = FontWeight.Black)
+        Spacer(modifier = Modifier.height(14.dp))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text("${storage.toInt()}%", color = Color(0xFFFBBF24), fontSize = 24.sp, fontWeight = FontWeight.Black, modifier = Modifier.width(60.dp))
+            Spacer(modifier = Modifier.width(16.dp))
+            ProgressBar(storage.toInt())
+        }
+    }
+}
+
+@Composable
+fun ShutdownScreen(t: Translations.Translation, viewModel: AppViewModel) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color(0xFF0B1220))
+            .padding(24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Text("MAZENGALAB", color = Color.White, fontSize = 42.sp, fontWeight = FontWeight.Black, letterSpacing = 6.sp)
+        Text("BESTON ANDROID", color = Color(0xFF38BDF8), fontSize = 28.sp, fontWeight = FontWeight.Black, letterSpacing = 4.sp)
+        
+        HorizontalDivider(color = Color(0xFF1D4ED8), thickness = 4.dp, modifier = Modifier.padding(vertical = 24.dp).width(200.dp))
+        
+        Text(t.strings["shutting_down"] ?: "Shutting down...", color = Color.White, fontSize = 20.sp, modifier = Modifier.padding(bottom = 32.dp))
+        
+        androidx.compose.material3.CircularProgressIndicator(color = Color(0xFF1D4ED8), modifier = Modifier.size(48.dp), strokeWidth = 4.dp)
+        
+        Spacer(modifier = Modifier.height(64.dp))
+        
+        Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+            Button(
+                onClick = { /* confirm shut down demo */ },
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFDC2626)),
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier.height(48.dp)
+            ) {
+                Text(t.strings["confirm_shut_down"] ?: "Confirm Shut Down", color = Color.White, fontWeight = FontWeight.Bold)
+            }
+            OutlinedButton(
+                onClick = { viewModel.setPowerState("on") },
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White),
+                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF334155)),
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier.height(48.dp)
+            ) {
+                Text(t.strings["cancel"] ?: "Cancel", color = Color.White, fontWeight = FontWeight.Bold)
+            }
+        }
+        
+        Spacer(modifier = Modifier.height(24.dp))
+        
+        Text(t.strings["shutdown_demo"] ?: "Demo only — managed Expo cannot power off or reboot Android. Connect an OEM/native power control to complete the action.", color = NeutralText, fontSize = 13.sp, textAlign = androidx.compose.ui.text.style.TextAlign.Center, modifier = Modifier.padding(horizontal = 24.dp))
+    }
+}
