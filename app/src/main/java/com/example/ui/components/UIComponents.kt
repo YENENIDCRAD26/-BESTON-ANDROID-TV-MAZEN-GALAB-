@@ -188,3 +188,40 @@ fun ProgressBar(value: Int) {
         )
     }
 }
+
+@Composable
+fun MinimalOsUpdateProgressBar(progress: Float, statusText: String) {
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(bottom = 6.dp),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text(
+                text = statusText,
+                color = TextSecondary,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Bold
+            )
+            Text(
+                text = "${(progress * 100).toInt()}%",
+                color = Color(0xFF38BDF8),
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Black
+            )
+        }
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(4.dp) // Optimized for minimal memory/rendering
+                .clip(RoundedCornerShape(2.dp))
+                .background(Color(0xFF1E293B))
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth(progress.coerceIn(0f, 1f))
+                    .fillMaxHeight()
+                    .background(Color(0xFF38BDF8))
+            )
+        }
+    }
+}

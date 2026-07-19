@@ -45,6 +45,9 @@ class AppViewModel : ViewModel() {
     private val _usbInstallState = MutableStateFlow("idle")
     val usbInstallState: StateFlow<String> = _usbInstallState.asStateFlow()
 
+    private val _usbInstallProgress = MutableStateFlow(0f)
+    val usbInstallProgress: StateFlow<Float> = _usbInstallProgress.asStateFlow()
+
     private val _rootEnabled = MutableStateFlow(false)
     val rootEnabled: StateFlow<Boolean> = _rootEnabled.asStateFlow()
 
@@ -122,14 +125,21 @@ class AppViewModel : ViewModel() {
         if (_usbInstallState.value != "idle") return
         viewModelScope.launch {
             _usbInstallState.value = "checking"
+            _usbInstallProgress.value = 0f
             val updates = LocalUpdateManager.checkForLocalUpdates()
             delay(1000)
             if (updates.isNotEmpty()) {
                 val pkg = updates.first()
                 if (LocalUpdateManager.verifyUpdatePackage(pkg)) {
                     _usbInstallState.value = "installing"
-                    delay(2000)
-                    addHistory(t.strings["install_from_usb"] ?: "Install from USB", "Completed", "Installed \${pkg.name}")
+                    
+                    // Simulate progress
+                    for (i in 1..100) {
+                        delay(30)
+                        _usbInstallProgress.value = i / 100f
+                    }
+                    
+                    addHistory(t.strings["install_from_usb"] ?: "Install from USB", "Completed", "Installed ${pkg.name}")
                     _usbInstallState.value = "success"
                 } else {
                     addHistory(t.strings["install_from_usb"] ?: "Install from USB", "Failed", "Invalid package signature")
@@ -141,6 +151,7 @@ class AppViewModel : ViewModel() {
             }
             delay(3000)
             _usbInstallState.value = "idle"
+            _usbInstallProgress.value = 0f
         }
     }
 
@@ -196,6 +207,11 @@ class AppViewModel : ViewModel() {
     fun prepareUpgrade() { _upgradePrepared.value = true }
     fun signPlayStore() { _playStoreSigned.value = true }
     fun completeFreeSpaceInstall() { _freeSpaceInstallCompleted.value = true }
+    
+    private val _installProgress = MutableStateFlow(0f)
+    val installProgress: StateFlow<Float> = _installProgress.asStateFlow()
+    
+    fun setInstallProgress(progress: Float) { _installProgress.value = progress }
     
     fun setUpdateState(state: String) { _updateState.value = state }
     fun setLastCheck(check: String) { _lastCheck.value = check }

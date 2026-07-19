@@ -318,6 +318,8 @@ fun InstallContent(t: Translations.Translation, viewModel: AppViewModel) {
     val eta by viewModel.eta.collectAsState()
     val updateState by viewModel.updateState.collectAsState()
 
+    val installProgress by viewModel.installProgress.collectAsState()
+
     LaunchedEffect(updateState) {
         if (updateState == "downloading") {
             while (viewModel.downloadProgress.value < 100) {
@@ -335,6 +337,15 @@ fun InstallContent(t: Translations.Translation, viewModel: AppViewModel) {
                     viewModel.setEta("${maxOf(1, remaining)} min")
                 }
             }
+        } else if (updateState == "installing") {
+            var currentProgress = 0f
+            while (currentProgress < 1f) {
+                delay(200)
+                currentProgress += 0.05f
+                viewModel.setInstallProgress(currentProgress.coerceAtMost(1f))
+            }
+            delay(1000)
+            viewModel.setUpdateState("installed")
         }
     }
 
@@ -345,15 +356,32 @@ fun InstallContent(t: Translations.Translation, viewModel: AppViewModel) {
                 Text(AppData.updatePackage.version, color = TextPrimary, fontSize = 17.sp, fontWeight = FontWeight.Black)
                 Text("${AppData.updatePackage.size} · ${AppData.updatePackage.checksum}", color = TextSecondary, fontSize = 13.sp, modifier = Modifier.padding(top = 4.dp))
             }
-            Badge(if (updateState == "idle") t.strings["ready"] ?: "" else t.strings["downloading"] ?: "", if (updateState == "idle") "neutral" else "info")
+            val badgeText = when (updateState) {
+                "idle" -> t.strings["ready"] ?: "Ready"
+                "downloading" -> t.strings["downloading"] ?: "Downloading"
+                "downloaded" -> "Downloaded"
+                "installing" -> "Installing"
+                "installed" -> "Installed"
+                else -> ""
+            }
+            val badgeTone = if (updateState == "idle") "neutral" else if (updateState == "installed") "success" else "info"
+            Badge(badgeText, badgeTone)
         }
         
         Spacer(modifier = Modifier.height(14.dp))
-        ProgressBar(downloadProgress)
-        Spacer(modifier = Modifier.height(12.dp))
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            Text("$downloadProgress% ${t.strings["complete"]}", color = NeutralText, fontSize = 13.sp, fontWeight = FontWeight.ExtraBold)
-            Text("$downloadSpeed · ETA $eta", color = NeutralText, fontSize = 13.sp, fontWeight = FontWeight.ExtraBold)
+        
+        if (updateState == "installing" || updateState == "installed") {
+            MinimalOsUpdateProgressBar(
+                progress = installProgress,
+                statusText = if (updateState == "installed") "Installation Complete" else "Applying OS Update (Optimized)..."
+            )
+        } else {
+            ProgressBar(downloadProgress)
+            Spacer(modifier = Modifier.height(12.dp))
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Text("$downloadProgress% ${t.strings["complete"]}", color = NeutralText, fontSize = 13.sp, fontWeight = FontWeight.ExtraBold)
+                Text("$downloadSpeed · ETA $eta", color = NeutralText, fontSize = 13.sp, fontWeight = FontWeight.ExtraBold)
+            }
         }
 
         Spacer(modifier = Modifier.height(14.dp))
@@ -372,17 +400,24 @@ fun InstallContent(t: Translations.Translation, viewModel: AppViewModel) {
 
         Spacer(modifier = Modifier.height(14.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            ActionButton(t.strings["download"] ?: "", onClick = { 
-                viewModel.setUpdateState("downloading")
-                viewModel.setDownloadSpeed("8.0 MB/s")
-                viewModel.setEta("17 min")
-            }, disabled = updateState == "downloading" || updateState == "downloaded")
+            if (updateState == "downloaded") {
+                ActionButton("Install Update", onClick = { 
+                    viewModel.setUpdateState("installing")
+                }, tone = "primary")
+            } else {
+                ActionButton(t.strings["download"] ?: "", onClick = { 
+                    viewModel.setUpdateState("downloading")
+                    viewModel.setDownloadSpeed("8.0 MB/s")
+                    viewModel.setEta("17 min")
+                }, disabled = updateState != "idle")
+            }
             
             ActionButton(t.strings["reset"] ?: "", onClick = {
                 viewModel.setUpdateState("idle")
                 viewModel.setDownloadProgress(0)
                 viewModel.setDownloadSpeed("0 MB/s")
                 viewModel.setEta("—")
+                viewModel.setInstallProgress(0f)
             }, tone = "ghost")
         }
     }
@@ -460,6 +495,8 @@ fun PackagesContent(t: Translations.Translation, viewModel: AppViewModel) {
             Text(t.strings["usb_install_desc"] ?: "Open, update, and install system packages from an external USB storage drive.", color = NeutralText, fontSize = 14.sp)
             Spacer(modifier = Modifier.height(14.dp))
             
+            val usbInstallProgress by viewModel.usbInstallProgress.collectAsState()
+            
             if (usbState == "idle") {
                 ActionButton(
                     label = t.strings["install_from_usb"] ?: "Install from USB",
@@ -473,11 +510,10 @@ fun PackagesContent(t: Translations.Translation, viewModel: AppViewModel) {
                     Text(t.strings["usb_not_found"] ?: "Checking for USB...", color = NeutralText, fontSize = 14.sp)
                 }
             } else if (usbState == "installing") {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    androidx.compose.material3.CircularProgressIndicator(color = Color(0xFF1D4ED8), modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Text(t.strings["installing_usb"] ?: "Installing from USB...", color = NeutralText, fontSize = 14.sp)
-                }
+                MinimalOsUpdateProgressBar(
+                    progress = usbInstallProgress,
+                    statusText = t.strings["installing_usb"] ?: "Installing from USB..."
+                )
             } else if (usbState == "success") {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Badge(t.strings["usb_pkg_found"] ?: "Success", "success")
