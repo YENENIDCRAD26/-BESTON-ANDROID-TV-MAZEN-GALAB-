@@ -117,7 +117,9 @@ fun TabsRow(t: Translations.Translation, viewModel: AppViewModel) {
         "packages" to t.strings["tab_packages"],
         "desktop" to t.strings["tab_desktop"],
         "settings" to t.strings["tab_settings"],
-        "performance" to t.strings["tab_performance"]
+        "performance" to t.strings["tab_performance"],
+        "root" to t.strings["tab_root"],
+        "satellite" to t.strings["tab_satellite"]
     )
 
     Row(
@@ -170,6 +172,8 @@ fun MainContent(t: Translations.Translation, viewModel: AppViewModel) {
             "desktop" -> DesktopContent(t, viewModel)
             "settings" -> SettingsContent(t, viewModel)
             "performance" -> PerformanceContent(t, viewModel)
+            "root" -> RootSetupContent(t, viewModel)
+            "satellite" -> SatelliteContent(t, viewModel)
             else -> DashboardContent(t, viewModel)
         }
         Spacer(modifier = Modifier.height(24.dp))
@@ -523,6 +527,50 @@ fun DesktopContent(t: Translations.Translation, viewModel: AppViewModel) {
 fun SettingsContent(t: Translations.Translation, viewModel: AppViewModel) {
     SectionTitle(t.settings.eyebrow, t.settings.title, t.settings.subtitle)
     
+    val startupMode by viewModel.startupMode.collectAsState()
+    val autoDisplay by viewModel.autoDisplaySettings.collectAsState()
+    val brightness by viewModel.brightness.collectAsState()
+    val contrast by viewModel.contrast.collectAsState()
+    val colorSaturation by viewModel.colorSaturation.collectAsState()
+    val volumeLevel by viewModel.volumeLevel.collectAsState()
+
+    Card {
+        Text(t.strings["startup_mode"] ?: "Startup Mode", color = TextPrimary, fontSize = 17.sp, fontWeight = FontWeight.Black)
+        Spacer(modifier = Modifier.height(14.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            ActionButton(t.strings["startup_desktop"] ?: "Desktop", onClick = { viewModel.setStartupMode("desktop") }, tone = if (startupMode == "desktop") "primary" else "secondary")
+            ActionButton(t.strings["startup_tv"] ?: "Live TV", onClick = { viewModel.setStartupMode("tv") }, tone = if (startupMode == "tv") "primary" else "secondary")
+        }
+    }
+
+    Card {
+        Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Text(t.strings["display_settings"] ?: "Display Settings", color = TextPrimary, fontSize = 17.sp, fontWeight = FontWeight.Black)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(t.strings["auto_display"] ?: "Auto Adjust", color = NeutralText, fontSize = 14.sp)
+                Spacer(modifier = Modifier.width(8.dp))
+                Switch(checked = autoDisplay, onCheckedChange = { viewModel.setAutoDisplaySettings(it) })
+            }
+        }
+        Spacer(modifier = Modifier.height(14.dp))
+        
+        Text(t.strings["brightness"] ?: "Brightness", color = TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+        androidx.compose.material3.Slider(value = brightness, onValueChange = { viewModel.setBrightness(it) }, valueRange = 0f..100f, enabled = !autoDisplay)
+        
+        Text(t.strings["contrast"] ?: "Contrast", color = TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+        androidx.compose.material3.Slider(value = contrast, onValueChange = { viewModel.setContrast(it) }, valueRange = 0f..100f, enabled = !autoDisplay)
+        
+        Text(t.strings["color_saturation"] ?: "Color", color = TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+        androidx.compose.material3.Slider(value = colorSaturation, onValueChange = { viewModel.setColorSaturation(it) }, valueRange = 0f..100f, enabled = !autoDisplay)
+    }
+
+    Card {
+        Text(t.strings["audio_settings"] ?: "Audio Settings", color = TextPrimary, fontSize = 17.sp, fontWeight = FontWeight.Black)
+        Spacer(modifier = Modifier.height(14.dp))
+        Text(t.strings["volume_level"] ?: "Volume Level", color = TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+        androidx.compose.material3.Slider(value = volumeLevel, onValueChange = { viewModel.setVolumeLevel(it) }, valueRange = 0f..100f)
+    }
+
     Card {
         Text(t.strings["power_control"] ?: "", color = TextPrimary, fontSize = 17.sp, fontWeight = FontWeight.Black)
         Spacer(modifier = Modifier.height(14.dp))
@@ -643,6 +691,209 @@ fun PerformanceContent(t: Translations.Translation, viewModel: AppViewModel) {
             Text("${storage.toInt()}%", color = Color(0xFFFBBF24), fontSize = 24.sp, fontWeight = FontWeight.Black, modifier = Modifier.width(60.dp))
             Spacer(modifier = Modifier.width(16.dp))
             ProgressBar(storage.toInt())
+        }
+    }
+}
+
+@Composable
+fun SatelliteContent(t: Translations.Translation, viewModel: AppViewModel) {
+    val selectedSource by viewModel.selectedChannelSource.collectAsState()
+    
+    SectionTitle(t.strings["sat_eyebrow"] ?: "Satellite Channels", t.strings["sat_desc"] ?: "Broadcast configuration.", null)
+    
+    Card {
+        Column(modifier = Modifier.fillMaxWidth()) {
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                Text(t.strings["sat_title"] ?: "Live Broadcasts", color = TextPrimary, fontSize = 20.sp, fontWeight = FontWeight.Black)
+                Badge("FTA", "success")
+            }
+            Text(t.strings["sat_subtitle"] ?: "Public / general mode", color = NeutralText, fontSize = 13.sp)
+            
+            Spacer(modifier = Modifier.height(24.dp))
+            Text(t.strings["source"] ?: "Source", color = TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+            Spacer(modifier = Modifier.height(8.dp))
+            
+            val scrollState = rememberScrollState()
+            Row(
+                modifier = Modifier.horizontalScroll(scrollState),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                val sources = listOf(
+                    "internal_dish" to (t.strings["int_recv_dish"] ?: "Internal (Dish)"),
+                    "internal_web" to (t.strings["int_recv_web"] ?: "Internal (Web)"),
+                    "terrestrial" to (t.strings["terrestrial"] ?: "Terrestrial"),
+                    "hdmi" to (t.strings["ext_recv"] ?: "External receiver"),
+                    "usb" to (t.strings["usb_media"] ?: "USB media")
+                )
+                sources.forEach { (id, label) ->
+                    val isSelected = selectedSource == id
+                    Box(
+                        modifier = Modifier
+                            .background(if (isSelected) Color(0xFF1D4ED8) else Color.Transparent, RoundedCornerShape(8.dp))
+                            .border(1.dp, if (isSelected) Color(0xFF1D4ED8) else Color(0xFF334155), RoundedCornerShape(8.dp))
+                            .clickable { viewModel.setChannelSource(id) }
+                            .padding(horizontal = 14.dp, vertical = 8.dp)
+                    ) {
+                        Text(label, color = if (isSelected) Color.White else NeutralText, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+            
+            val autoScanRunning by viewModel.autoScanRunning.collectAsState()
+
+            Spacer(modifier = Modifier.height(24.dp))
+            
+            if (selectedSource == "terrestrial" || selectedSource == "internal_dish") {
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                    Text(t.strings["auto_scan"] ?: "Auto Scan", color = TextPrimary, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                    ActionButton(
+                        if (autoScanRunning) "Scanning..." else "Scan", 
+                        onClick = { 
+                            val tunerType = if (selectedSource == "terrestrial") TunerType.DVB_T else TunerType.DVB_S
+                            viewModel.setAutoScanRunning(!autoScanRunning, tunerType) 
+                        },
+                        tone = if (autoScanRunning) "warning" else "primary"
+                    )
+                }
+                Spacer(modifier = Modifier.height(16.dp))
+                if (autoScanRunning) {
+                    androidx.compose.material3.LinearProgressIndicator(modifier = Modifier.fillMaxWidth(), color = Color(0xFF38BDF8))
+                    Spacer(modifier = Modifier.height(16.dp))
+                }
+            }
+
+            val scannedChannels by viewModel.scannedChannels.collectAsState()
+
+            // Channel List
+            val channels = if (scannedChannels.isNotEmpty() && (selectedSource == "terrestrial" || selectedSource == "internal_dish")) {
+                scannedChannels.map { Triple(it.name, it.frequency, it.type) }
+            } else if (selectedSource == "terrestrial") {
+                listOf(
+                    Triple("Local TV 1", "UHF 21", "HD • FTA"),
+                    Triple("Local TV 2", "UHF 24", "HD • FTA"),
+                    Triple("Local News", "VHF 10", "SD • FTA")
+                )
+            } else if (selectedSource == "internal_web") {
+                 listOf(
+                    Triple("Al Jazeera", "IPTV Stream 1", "NEWS"),
+                    Triple("France 24", "IPTV Stream 2", "NEWS"),
+                    Triple("Sports HD", "IPTV Stream 3", "SPORTS")
+                )
+            } else {
+                listOf(
+                    Triple("Al Jazeera", "Nilesat 201 • 7°W", "NEWS • FTA"),
+                    Triple("France 24 English", "Nilesat 201 • 7°W", "NEWS • FTA"),
+                    Triple("DW English", "Hotbird • 13°E", "NEWS • FTA"),
+                    Triple("TRT World", "Turksat • 42°E", "NEWS • FTA"),
+                    Triple("NHK World Japan", "Hotbird • 13°E", "NEWS • FTA"),
+                    Triple("Sahel Sports (FTA)", "Eutelsat • 7°W", "SPORTS • FTA")
+                )
+            }
+            
+            channels.forEach { (name, freq, tag) ->
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 8.dp)
+                        .background(Color(0xFF0F172A), RoundedCornerShape(8.dp))
+                        .border(1.dp, Color(0xFF1E293B), RoundedCornerShape(8.dp))
+                        .padding(16.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column {
+                        Text(name, color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                        Text(freq, color = NeutralText, fontSize = 12.sp)
+                    }
+                    Badge(tag, "success")
+                }
+            }
+            
+            Spacer(modifier = Modifier.height(16.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                ActionButton(t.strings["open_channel"] ?: "Open Channel", onClick = { }, tone = "primary")
+                ActionButton(t.strings["close"] ?: "Close", onClick = { }, tone = "secondary")
+            }
+        }
+    }
+}
+
+@Composable
+fun RootSetupContent(t: Translations.Translation, viewModel: AppViewModel) {
+    val rootEnabled by viewModel.rootEnabled.collectAsState()
+    val upgradePrepared by viewModel.upgradePrepared.collectAsState()
+    val playStoreSigned by viewModel.playStoreSigned.collectAsState()
+    val freeSpaceInstallCompleted by viewModel.freeSpaceInstallCompleted.collectAsState()
+
+    SectionTitle(t.strings["root_upgrade_title"] ?: "Base Package Setup & Root", t.strings["root_upgrade_desc"] ?: "Base package setup.", null)
+
+    Card {
+        Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            Text(t.strings["core_services"] ?: "Core services integrated.", color = Color(0xFF38BDF8), fontSize = 13.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 8.dp))
+            
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(t.strings["free_space_install"] ?: "Free Space & Install Features", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                    if (freeSpaceInstallCompleted) {
+                        Text(t.strings["free_space_install_desc"] ?: "Installed full features", color = Color(0xFF34D399), fontSize = 13.sp)
+                    } else {
+                        Text(t.strings["free_space_install_desc"] ?: "Replace old system", color = NeutralText, fontSize = 12.sp)
+                    }
+                }
+                if (!freeSpaceInstallCompleted) {
+                    ActionButton("Install", onClick = { viewModel.completeFreeSpaceInstall() }, tone = "primary")
+                } else {
+                    Badge("OK", "success")
+                }
+            }
+            
+            HorizontalDivider(color = BorderColor)
+            
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(t.strings["enable_root"] ?: "Enable Root", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                    if (rootEnabled) {
+                        Text(t.strings["root_enabled"] ?: "Root enabled", color = Color(0xFF34D399), fontSize = 13.sp)
+                    }
+                }
+                if (!rootEnabled) {
+                    ActionButton("Run", onClick = { viewModel.enableRoot() }, tone = "danger")
+                } else {
+                    Badge("OK", "success")
+                }
+            }
+            
+            HorizontalDivider(color = BorderColor)
+            
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(t.strings["prepare_upgrade"] ?: "Prepare Upgrade", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                    if (upgradePrepared) {
+                        Text(t.strings["upgrade_prepared"] ?: "Ready", color = Color(0xFF34D399), fontSize = 13.sp)
+                    }
+                }
+                if (!upgradePrepared) {
+                    ActionButton("Start", onClick = { viewModel.prepareUpgrade() }, tone = "primary")
+                } else {
+                    Badge("OK", "success")
+                }
+            }
+            
+            HorizontalDivider(color = BorderColor)
+            
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(t.strings["sign_play_store"] ?: "Sign with Google Play Store", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                    if (playStoreSigned) {
+                        Text(t.strings["signed_play_store"] ?: "Signed", color = Color(0xFF34D399), fontSize = 13.sp)
+                    }
+                }
+                if (!playStoreSigned) {
+                    ActionButton("Sign", onClick = { viewModel.signPlayStore() }, tone = "warning")
+                } else {
+                    Badge("OK", "success")
+                }
+            }
         }
     }
 }

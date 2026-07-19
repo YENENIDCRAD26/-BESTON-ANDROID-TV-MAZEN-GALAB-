@@ -23,7 +23,7 @@ object AppData {
         androidLabel = "Android 5.0.1+ compatible",
         buildNumber = "SSO-2026.05.03-r8",
         apiLevel = android.os.Build.VERSION.SDK_INT,
-        storage = "3.8 GB available",
+        storage = "512 MB (Internal) + USB Expandable",
         power = "AC power connected",
         network = "Wi‑Fi online"
     )

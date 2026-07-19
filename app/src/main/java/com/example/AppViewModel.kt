@@ -45,8 +45,44 @@ class AppViewModel : ViewModel() {
     private val _usbInstallState = MutableStateFlow("idle")
     val usbInstallState: StateFlow<String> = _usbInstallState.asStateFlow()
 
+    private val _rootEnabled = MutableStateFlow(false)
+    val rootEnabled: StateFlow<Boolean> = _rootEnabled.asStateFlow()
+
+    private val _playStoreSigned = MutableStateFlow(false)
+    val playStoreSigned: StateFlow<Boolean> = _playStoreSigned.asStateFlow()
+
+    private val _upgradePrepared = MutableStateFlow(false)
+    val upgradePrepared: StateFlow<Boolean> = _upgradePrepared.asStateFlow()
+
+    private val _satelliteDialog = MutableStateFlow(false)
+    val satelliteDialog: StateFlow<Boolean> = _satelliteDialog.asStateFlow()
+
+    private val _selectedChannelSource = MutableStateFlow("satellite")
+    val selectedChannelSource: StateFlow<String> = _selectedChannelSource.asStateFlow()
+
     private val _powerState = MutableStateFlow("on")
     val powerState: StateFlow<String> = _powerState.asStateFlow()
+
+    private val _startupMode = MutableStateFlow("tv")
+    val startupMode: StateFlow<String> = _startupMode.asStateFlow()
+
+    private val _brightness = MutableStateFlow(50f)
+    val brightness: StateFlow<Float> = _brightness.asStateFlow()
+
+    private val _contrast = MutableStateFlow(50f)
+    val contrast: StateFlow<Float> = _contrast.asStateFlow()
+
+    private val _colorSaturation = MutableStateFlow(50f)
+    val colorSaturation: StateFlow<Float> = _colorSaturation.asStateFlow()
+
+    private val _autoDisplaySettings = MutableStateFlow(true)
+    val autoDisplaySettings: StateFlow<Boolean> = _autoDisplaySettings.asStateFlow()
+
+    private val _volumeLevel = MutableStateFlow(30f)
+    val volumeLevel: StateFlow<Float> = _volumeLevel.asStateFlow()
+
+    private val _autoScanRunning = MutableStateFlow(false)
+    val autoScanRunning: StateFlow<Boolean> = _autoScanRunning.asStateFlow()
 
     private val _cpuUsage = MutableStateFlow(42f)
     val cpuUsage: StateFlow<Float> = _cpuUsage.asStateFlow()
@@ -86,11 +122,23 @@ class AppViewModel : ViewModel() {
         if (_usbInstallState.value != "idle") return
         viewModelScope.launch {
             _usbInstallState.value = "checking"
+            val updates = LocalUpdateManager.checkForLocalUpdates()
             delay(1000)
-            _usbInstallState.value = "installing"
-            delay(2000)
-            addHistory(t.strings["install_from_usb"] ?: "Install from USB", "Completed", t.strings["usb_pkg_found"] ?: "Found update package on USB")
-            _usbInstallState.value = "success"
+            if (updates.isNotEmpty()) {
+                val pkg = updates.first()
+                if (LocalUpdateManager.verifyUpdatePackage(pkg)) {
+                    _usbInstallState.value = "installing"
+                    delay(2000)
+                    addHistory(t.strings["install_from_usb"] ?: "Install from USB", "Completed", "Installed \${pkg.name}")
+                    _usbInstallState.value = "success"
+                } else {
+                    addHistory(t.strings["install_from_usb"] ?: "Install from USB", "Failed", "Invalid package signature")
+                    _usbInstallState.value = "idle"
+                }
+            } else {
+                addHistory(t.strings["install_from_usb"] ?: "Install from USB", "Failed", "No update package found")
+                _usbInstallState.value = "idle"
+            }
             delay(3000)
             _usbInstallState.value = "idle"
         }
@@ -117,6 +165,37 @@ class AppViewModel : ViewModel() {
     fun setLanguage(lang: String) { _language.value = lang }
     fun setActiveTab(tab: String) { _activeTab.value = tab }
     fun setPowerState(state: String) { _powerState.value = state }
+
+    fun setSatelliteDialog(show: Boolean) { _satelliteDialog.value = show }
+    fun setChannelSource(source: String) { _selectedChannelSource.value = source }
+
+    fun setStartupMode(mode: String) { _startupMode.value = mode }
+    fun setBrightness(value: Float) { _brightness.value = value }
+    fun setContrast(value: Float) { _contrast.value = value }
+    fun setColorSaturation(value: Float) { _colorSaturation.value = value }
+    fun setAutoDisplaySettings(auto: Boolean) { _autoDisplaySettings.value = auto }
+    fun setVolumeLevel(level: Float) { _volumeLevel.value = level }
+    private val tunerManager = TunerManager()
+    private val _scannedChannels = MutableStateFlow<List<TvChannel>>(emptyList())
+    val scannedChannels: StateFlow<List<TvChannel>> = _scannedChannels.asStateFlow()
+
+    fun setAutoScanRunning(running: Boolean, tunerType: TunerType? = null) { 
+        _autoScanRunning.value = running 
+        if (running && tunerType != null) {
+            viewModelScope.launch {
+                _scannedChannels.value = tunerManager.scanChannels(tunerType)
+                _autoScanRunning.value = false
+            }
+        }
+    }
+
+    private val _freeSpaceInstallCompleted = MutableStateFlow(false)
+    val freeSpaceInstallCompleted: StateFlow<Boolean> = _freeSpaceInstallCompleted.asStateFlow()
+
+    fun enableRoot() { _rootEnabled.value = true }
+    fun prepareUpgrade() { _upgradePrepared.value = true }
+    fun signPlayStore() { _playStoreSigned.value = true }
+    fun completeFreeSpaceInstall() { _freeSpaceInstallCompleted.value = true }
     
     fun setUpdateState(state: String) { _updateState.value = state }
     fun setLastCheck(check: String) { _lastCheck.value = check }
