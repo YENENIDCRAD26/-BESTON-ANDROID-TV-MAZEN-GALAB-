@@ -19,6 +19,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.res.painterResource
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.LayoutDirection
@@ -109,17 +112,17 @@ fun TabsRow(t: Translations.Translation, viewModel: AppViewModel) {
     val scrollState = rememberScrollState()
     
     val tabs = listOf(
-        "dashboard" to t.strings["tab_dashboard"],
-        "check" to t.strings["tab_check"],
-        "install" to t.strings["tab_install"],
-        "history" to t.strings["tab_history"],
-        "device" to t.strings["tab_device"],
-        "packages" to t.strings["tab_packages"],
-        "desktop" to t.strings["tab_desktop"],
-        "settings" to t.strings["tab_settings"],
-        "performance" to t.strings["tab_performance"],
-        "root" to t.strings["tab_root"],
-        "satellite" to t.strings["tab_satellite"]
+        Triple("dashboard", t.strings["tab_dashboard"], Icons.Default.Info),
+        Triple("check", t.strings["tab_check"], Icons.Default.Refresh),
+        Triple("install", t.strings["tab_install"], Icons.Default.KeyboardArrowDown),
+        Triple("history", t.strings["tab_history"], Icons.Default.List),
+        Triple("device", t.strings["tab_device"], Icons.Default.Phone),
+        Triple("packages", t.strings["tab_packages"], Icons.Default.Build),
+        Triple("desktop", t.strings["tab_desktop"], Icons.Default.Home),
+        Triple("settings", t.strings["tab_settings"], Icons.Default.Settings),
+        Triple("performance", t.strings["tab_performance"], Icons.Default.Speed),
+        Triple("root", t.strings["tab_root"], Icons.Default.Lock),
+        Triple("satellite", t.strings["tab_satellite"], Icons.Default.Place)
     )
 
     Row(
@@ -130,15 +133,23 @@ fun TabsRow(t: Translations.Translation, viewModel: AppViewModel) {
             .padding(horizontal = 12.dp, vertical = 10.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        tabs.forEach { (id, label) ->
+        tabs.forEach { (id, label, iconRes) ->
             val isActive = activeTab == id
-            Box(
+            Row(
                 modifier = Modifier
                     .background(if (isActive) Color(0xFF1D4ED8) else Color.Transparent, RoundedCornerShape(50))
                     .border(1.dp, if (isActive) Color(0xFF60A5FA) else Color(0xFF334155), RoundedCornerShape(50))
                     .clickable { viewModel.setActiveTab(id) }
-                    .padding(horizontal = 14.dp, vertical = 9.dp)
+                    .padding(horizontal = 14.dp, vertical = 9.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
+                Icon(
+                    imageVector = iconRes,
+                    contentDescription = null,
+                    tint = if (isActive) Color.White else NeutralText,
+                    modifier = Modifier.size(16.dp)
+                )
                 Text(
                     text = label ?: "",
                     color = if (isActive) Color.White else NeutralText,
@@ -197,24 +208,40 @@ fun DashboardContent(t: Translations.Translation, viewModel: AppViewModel) {
 
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         Card(modifier = Modifier.weight(1f)) {
-            Text(t.strings["current_os"] ?: "", color = TextSecondary, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+            Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
+                Text(t.strings["current_os"] ?: "", color = TextSecondary, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                Icon(Icons.Default.Info, contentDescription = null, tint = TextSecondary, modifier = Modifier.size(16.dp))
+            }
+            Spacer(modifier = Modifier.height(4.dp))
             Text(AppData.deviceInfo.currentVersion, color = TextPrimary, fontSize = 20.sp, fontWeight = FontWeight.Black)
             Badge(t.strings["ok"] ?: "", "success")
         }
         Card(modifier = Modifier.weight(1f)) {
-            Text(t.strings["available_update"] ?: "", color = TextSecondary, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+            Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
+                Text(t.strings["available_update"] ?: "", color = TextSecondary, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                Icon(Icons.Default.Refresh, contentDescription = null, tint = TextSecondary, modifier = Modifier.size(16.dp))
+            }
+            Spacer(modifier = Modifier.height(4.dp))
             Text(AppData.updatePackage.version, color = TextPrimary, fontSize = 20.sp, fontWeight = FontWeight.Black)
             Badge(t.strings["ok"] ?: "", "warning")
         }
     }
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         Card(modifier = Modifier.weight(1f)) {
-            Text(t.strings["storage"] ?: "", color = TextSecondary, fontSize = 13.sp, fontWeight = FontWeight.Bold)
-            Text(AppData.deviceInfo.storage, color = TextPrimary, fontSize = 20.sp, fontWeight = FontWeight.Black)
+            Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
+                Text(t.strings["storage"] ?: "", color = TextSecondary, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                Icon(Icons.Default.Build, contentDescription = null, tint = TextSecondary, modifier = Modifier.size(16.dp))
+            }
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(AppData.deviceInfo.storage, color = TextPrimary, fontSize = 18.sp, fontWeight = FontWeight.Black, lineHeight = 22.sp)
             Badge(t.strings["ok"] ?: "", "info")
         }
         Card(modifier = Modifier.weight(1f)) {
-            Text(t.strings["root_bridge"] ?: "", color = TextSecondary, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+            Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
+                Text(t.strings["root_bridge"] ?: "", color = TextSecondary, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                Icon(Icons.Default.Lock, contentDescription = null, tint = TextSecondary, modifier = Modifier.size(16.dp))
+            }
+            Spacer(modifier = Modifier.height(4.dp))
             Text(t.strings["not_connected"] ?: "", color = TextPrimary, fontSize = 20.sp, fontWeight = FontWeight.Black)
             Badge(t.strings["action_required"] ?: "", "danger")
         }
@@ -429,13 +456,22 @@ fun HistoryContent(t: Translations.Translation, viewModel: AppViewModel) {
     SectionTitle(t.history.eyebrow, t.history.title, t.history.subtitle)
     
     history.forEach { item ->
+        val isSuccess = item.status == "Successful" || item.status == "Completed"
         Card {
             Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(item.title, color = TextPrimary, fontSize = 17.sp, fontWeight = FontWeight.Black)
-                    Text(item.time, color = TextSecondary, fontSize = 13.sp, modifier = Modifier.padding(top = 4.dp))
+                Row(modifier = Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = if (isSuccess) Icons.Default.Check else Icons.Default.Close,
+                        contentDescription = null,
+                        tint = if (isSuccess) Color(0xFF34D399) else TextSecondary,
+                        modifier = Modifier.size(20.dp).padding(end = 8.dp)
+                    )
+                    Column {
+                        Text(item.title, color = TextPrimary, fontSize = 17.sp, fontWeight = FontWeight.Black)
+                        Text(item.time, color = TextSecondary, fontSize = 13.sp, modifier = Modifier.padding(top = 4.dp))
+                    }
                 }
-                Badge(item.status, if (item.status == "Successful" || item.status == "Completed") "success" else "neutral")
+                Badge(item.status, if (isSuccess) "success" else "neutral")
             }
             Spacer(modifier = Modifier.height(14.dp))
             Text(item.detail, color = NeutralText, fontSize = 14.sp)
@@ -530,12 +566,18 @@ fun DesktopContent(t: Translations.Translation, viewModel: AppViewModel) {
         Text(t.strings["home_screen_layout"] ?: "", color = TextPrimary, fontSize = 17.sp, fontWeight = FontWeight.Black)
         Spacer(modifier = Modifier.height(14.dp))
         Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Text(t.strings["show_clock"] ?: "", color = TextPrimary, fontSize = 15.sp, fontWeight = FontWeight.ExtraBold)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Default.Schedule, contentDescription = null, tint = TextSecondary, modifier = Modifier.size(18.dp).padding(end = 6.dp))
+                Text(t.strings["show_clock"] ?: "", color = TextPrimary, fontSize = 15.sp, fontWeight = FontWeight.ExtraBold)
+            }
             Switch(checked = true, onCheckedChange = {})
         }
         Spacer(modifier = Modifier.height(14.dp))
         Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Text(t.strings["show_weather"] ?: "", color = TextPrimary, fontSize = 15.sp, fontWeight = FontWeight.ExtraBold)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Default.Cloud, contentDescription = null, tint = TextSecondary, modifier = Modifier.size(18.dp).padding(end = 6.dp))
+                Text(t.strings["show_weather"] ?: "", color = TextPrimary, fontSize = 15.sp, fontWeight = FontWeight.ExtraBold)
+            }
             Switch(checked = true, onCheckedChange = {})
         }
     }
@@ -543,17 +585,26 @@ fun DesktopContent(t: Translations.Translation, viewModel: AppViewModel) {
         Text(t.strings["media_apps_sources"] ?: "", color = TextPrimary, fontSize = 17.sp, fontWeight = FontWeight.Black)
         Spacer(modifier = Modifier.height(14.dp))
         Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Text(t.strings["satellite_channels"] ?: "", color = TextPrimary, fontSize = 15.sp, fontWeight = FontWeight.ExtraBold)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Default.Tv, contentDescription = null, tint = TextSecondary, modifier = Modifier.size(18.dp).padding(end = 6.dp))
+                Text(t.strings["satellite_channels"] ?: "", color = TextPrimary, fontSize = 15.sp, fontWeight = FontWeight.ExtraBold)
+            }
             Switch(checked = true, onCheckedChange = {})
         }
         Spacer(modifier = Modifier.height(14.dp))
         Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Text(t.strings["auto_start_digital"] ?: "", color = TextPrimary, fontSize = 15.sp, fontWeight = FontWeight.ExtraBold)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Default.SettingsApplications, contentDescription = null, tint = TextSecondary, modifier = Modifier.size(18.dp).padding(end = 6.dp))
+                Text(t.strings["auto_start_digital"] ?: "", color = TextPrimary, fontSize = 15.sp, fontWeight = FontWeight.ExtraBold)
+            }
             Switch(checked = true, onCheckedChange = {})
         }
         Spacer(modifier = Modifier.height(14.dp))
         Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Text(t.strings["web_browser"] ?: "", color = TextPrimary, fontSize = 15.sp, fontWeight = FontWeight.ExtraBold)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Default.Search, contentDescription = null, tint = TextSecondary, modifier = Modifier.size(18.dp).padding(end = 6.dp))
+                Text(t.strings["web_browser"] ?: "", color = TextPrimary, fontSize = 15.sp, fontWeight = FontWeight.ExtraBold)
+            }
             Switch(checked = true, onCheckedChange = {})
         }
     }
@@ -755,22 +806,30 @@ fun SatelliteContent(t: Translations.Translation, viewModel: AppViewModel) {
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 val sources = listOf(
-                    "internal_dish" to (t.strings["int_recv_dish"] ?: "Internal (Dish)"),
-                    "internal_web" to (t.strings["int_recv_web"] ?: "Internal (Web)"),
-                    "digital_receiver" to (t.strings["digital_receiver"] ?: "Built-in Digital Receiver"),
-                    "terrestrial" to (t.strings["terrestrial"] ?: "Terrestrial"),
-                    "hdmi" to (t.strings["ext_recv"] ?: "External receiver"),
-                    "usb" to (t.strings["usb_media"] ?: "USB media")
+                    Triple("internal_dish", t.strings["int_recv_dish"] ?: "Internal (Dish)", Icons.Default.SettingsInputAntenna),
+                    Triple("internal_web", t.strings["int_recv_web"] ?: "Internal (Web)", Icons.Default.Wifi),
+                    Triple("digital_receiver", t.strings["digital_receiver"] ?: "Built-in Digital Receiver", Icons.Default.SettingsInputHdmi),
+                    Triple("terrestrial", t.strings["terrestrial"] ?: "Terrestrial", Icons.Default.CellTower),
+                    Triple("hdmi", t.strings["ext_recv"] ?: "External receiver", Icons.Default.SettingsInputComponent),
+                    Triple("usb", t.strings["usb_media"] ?: "USB media", Icons.Default.Usb)
                 )
-                sources.forEach { (id, label) ->
+                sources.forEach { (id, label, iconRes) ->
                     val isSelected = selectedSource == id
-                    Box(
+                    Row(
                         modifier = Modifier
                             .background(if (isSelected) Color(0xFF1D4ED8) else Color.Transparent, RoundedCornerShape(8.dp))
                             .border(1.dp, if (isSelected) Color(0xFF1D4ED8) else Color(0xFF334155), RoundedCornerShape(8.dp))
                             .clickable { viewModel.setChannelSource(id) }
-                            .padding(horizontal = 14.dp, vertical = 8.dp)
+                            .padding(horizontal = 14.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
+                        Icon(
+                            imageVector = iconRes,
+                            contentDescription = null,
+                            tint = if (isSelected) Color.White else NeutralText,
+                            modifier = Modifier.size(14.dp)
+                        )
                         Text(label, color = if (isSelected) Color.White else NeutralText, fontSize = 13.sp, fontWeight = FontWeight.Bold)
                     }
                 }
