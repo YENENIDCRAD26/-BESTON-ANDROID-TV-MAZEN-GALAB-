@@ -757,6 +757,7 @@ fun SatelliteContent(t: Translations.Translation, viewModel: AppViewModel) {
                 val sources = listOf(
                     "internal_dish" to (t.strings["int_recv_dish"] ?: "Internal (Dish)"),
                     "internal_web" to (t.strings["int_recv_web"] ?: "Internal (Web)"),
+                    "digital_receiver" to (t.strings["digital_receiver"] ?: "Built-in Digital Receiver"),
                     "terrestrial" to (t.strings["terrestrial"] ?: "Terrestrial"),
                     "hdmi" to (t.strings["ext_recv"] ?: "External receiver"),
                     "usb" to (t.strings["usb_media"] ?: "USB media")
@@ -779,13 +780,17 @@ fun SatelliteContent(t: Translations.Translation, viewModel: AppViewModel) {
 
             Spacer(modifier = Modifier.height(24.dp))
             
-            if (selectedSource == "terrestrial" || selectedSource == "internal_dish") {
+            if (selectedSource == "terrestrial" || selectedSource == "internal_dish" || selectedSource == "digital_receiver") {
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                     Text(t.strings["auto_scan"] ?: "Auto Scan", color = TextPrimary, fontSize = 16.sp, fontWeight = FontWeight.Bold)
                     ActionButton(
                         if (autoScanRunning) "Scanning..." else "Scan", 
                         onClick = { 
-                            val tunerType = if (selectedSource == "terrestrial") TunerType.DVB_T else TunerType.DVB_S
+                            val tunerType = when (selectedSource) {
+                                "terrestrial" -> TunerType.DVB_T
+                                "digital_receiver" -> TunerType.DVB_C_T2
+                                else -> TunerType.DVB_S
+                            }
                             viewModel.setAutoScanRunning(!autoScanRunning, tunerType) 
                         },
                         tone = if (autoScanRunning) "warning" else "primary"
@@ -801,8 +806,15 @@ fun SatelliteContent(t: Translations.Translation, viewModel: AppViewModel) {
             val scannedChannels by viewModel.scannedChannels.collectAsState()
 
             // Channel List
-            val channels = if (scannedChannels.isNotEmpty() && (selectedSource == "terrestrial" || selectedSource == "internal_dish")) {
+            val channels = if (scannedChannels.isNotEmpty() && (selectedSource == "terrestrial" || selectedSource == "internal_dish" || selectedSource == "digital_receiver")) {
                 scannedChannels.map { Triple(it.name, it.frequency, it.type) }
+            } else if (selectedSource == "digital_receiver") {
+                listOf(
+                    Triple("National Digital 1", "DVB-T2 626MHz", "FHD • FTA"),
+                    Triple("National Digital 2", "DVB-T2 626MHz", "HD • FTA"),
+                    Triple("Sports Digital", "DVB-C 450MHz", "FHD • FTA"),
+                    Triple("Kids Channel", "DVB-T2 642MHz", "SD • FTA")
+                )
             } else if (selectedSource == "terrestrial") {
                 listOf(
                     Triple("Local TV 1", "UHF 21", "HD • FTA"),

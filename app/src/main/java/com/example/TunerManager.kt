@@ -5,7 +5,8 @@ import kotlinx.coroutines.delay
 
 enum class TunerType {
     DVB_S, // Satellite (Dish)
-    DVB_T  // Terrestrial (Antenna)
+    DVB_T,  // Terrestrial (Antenna)
+    DVB_C_T2 // Built-in Digital Receiver
 }
 
 data class TvChannel(val name: String, val frequency: String, val type: String)
@@ -36,6 +37,12 @@ class TunerManager {
                 TvChannel("Local TV 1", "UHF 21", "HD • FTA"),
                 TvChannel("Local TV 2", "UHF 24", "HD • FTA"),
                 TvChannel("Local News", "VHF 10", "SD • FTA")
+            )
+            TunerType.DVB_C_T2 -> listOf(
+                TvChannel("National Digital 1", "DVB-T2 626MHz", "FHD • FTA"),
+                TvChannel("National Digital 2", "DVB-T2 626MHz", "HD • FTA"),
+                TvChannel("Sports Digital", "DVB-C 450MHz", "FHD • FTA"),
+                TvChannel("Kids Channel", "DVB-T2 642MHz", "SD • FTA")
             )
         }
     }
