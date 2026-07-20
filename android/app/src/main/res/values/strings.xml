@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">MazenApp</string>
+    <string name="title_activity_main">MazenApp</string>
+    <string name="package_name">com.mazen.beston</string>
+    <string name="custom_url_scheme">com.mazen.beston</string>
+</resources>
